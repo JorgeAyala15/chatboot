@@ -2,6 +2,8 @@ import { Client, LocalAuth, MessageMedia } from 'whatsapp-web.js';
 import axios from 'axios';
 import { Chatbot } from '../../chatbot'; // Chatbot será una clase separada que maneja las respuestas
 import qrcode from 'qrcode-terminal';
+import fs from 'fs';
+import path from 'path';
 
 class WsTransporter extends Client {
   private status = false;
@@ -26,46 +28,35 @@ class WsTransporter extends Client {
     });
 
     // Escuchar mensajes entrantes
-
     this.on('message', async (msg) => {
-    if (msg.body) {
-    // console.log('Mensaje recibido de WhatsApp:', msg.body);
+      if (msg.body) {
+        const chatbotResponse = await this.chatbot.respondToMessage(msg.body);
 
-    const chatbotResponse = await this.chatbot.respondToMessage(msg.body);
+        if (chatbotResponse.media) {
+          let media: MessageMedia | undefined;
 
-    if (chatbotResponse.media) {
-      // Asegúrate de que chatbotResponse.media sea un MessageMedia válido
-      let media: MessageMedia | undefined;
+          if (typeof chatbotResponse.media === 'string' && chatbotResponse.media.startsWith('http')) {
+            try {
+              media = await MessageMedia.fromUrl(chatbotResponse.media, { unsafeMime: true });
+            } catch (error) {
+              console.error('Error al convertir la URL en media:', error);
+            }
+          } else {
+            console.error('El formato del media no es válido');
+          }
 
-      // Si media es una URL (string), conviértelo a MessageMedia
-      if (typeof chatbotResponse.media === 'string' && chatbotResponse.media.startsWith('http')) {
-        try {
-          // Usamos unsafeMime: true para permitir la descarga sin verificar el MIME
-          media = await MessageMedia.fromUrl(chatbotResponse.media, { unsafeMime: true }); // Convierte la URL a MessageMedia
-        } catch (error) {
-          console.error('Error al convertir la URL en media:', error);
+          if (media) {
+            await this.sendMessage(msg.from, chatbotResponse.text, {
+              media: media,
+            });
+          } else {
+            await this.sendMessage(msg.from, chatbotResponse.text);
+          }
+        } else {
+          await this.sendMessage(msg.from, chatbotResponse.text);
         }
-      } else {
-        console.error('El formato del media no es válido');
       }
-
-      // Si la conversión fue exitosa, enviamos el mensaje con el media
-      if (media) {
-        await this.sendMessage(msg.from, chatbotResponse.text, {
-          media: media,
-        });
-      } else {
-        // Si no hay media válido, enviamos solo el texto
-        await this.sendMessage(msg.from, chatbotResponse.text);
-      }
-    } else {
-      // Si no hay media, solo enviamos el texto
-      await this.sendMessage(msg.from, chatbotResponse.text);
-    }
-  }
     });
-
-    
 
     // Manejo de errores de autenticación
     this.on('auth_failure', () => {
@@ -91,22 +82,39 @@ class WsTransporter extends Client {
   }): Promise<any> {
     try {
       if (!this.status) return { error: 'WAIT_LOGIN' };
-
-      if (imagePath) {
-        // Aquí se manejaría el envío de mensajes con imágenes
-        const media = await this.downloadImage(imagePath); // Método para descargar imágenes
-        if (!media) {
-          return { error: 'No se pudo descargar la imagen desde la URL.' };
+      if(imagePath?.includes('pdf')){
+        try {
+          // Leer el archivo PDF desde la ruta local
+          const filePath = imagePath;
+          // console.log('filePath'+filePath)
+          const fileBuffer = fs.readFileSync(imagePath);
+          
+          // Crear el objeto MessageMedia para el archivo PDF
+          const media = new MessageMedia('application/pdf', fileBuffer.toString('base64'), path.basename(filePath));
+          
+          // Enviar el mensaje con el archivo PDF
+          const response = await this.sendMessage(`${phone}@c.us`, message, { media });
+          return { response };
+        } catch (error: any) {
+          console.error('Error al enviar el archivo PDF:', error);
+          return { error: error.message };
         }
-
-        const response = await this.sendMessage(`${phone}@c.us`, message, { media });
-        return { response };
+      }
+      if (imagePath) {
+  
+          // Si es una imagen, lo descargamos directamente
+          const media = await this.downloadImage(imagePath);
+          if (!media) {
+            return { error: 'No se pudo descargar la imagen desde la URL.' };
+          }
+          const response = await this.sendMessage(`${phone}@c.us`, message, { media });
+          return { response };
       }
 
       // Si no se pasa imagen, solo enviamos el mensaje de texto
       const response = await this.sendMessage(`${phone}@c.us`, message);
       return { response };
-    } catch (error:any) {
+    } catch (error: any) {
       console.error('Error al enviar el mensaje:', error);
       return { error: error.message };
     }
@@ -124,5 +132,4 @@ class WsTransporter extends Client {
     }
   }
 }
-
 export default WsTransporter;
