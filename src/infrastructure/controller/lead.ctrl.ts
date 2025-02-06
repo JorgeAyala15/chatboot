@@ -6,7 +6,7 @@ class LeadCtrl {
   constructor(private readonly leadCreator: LeadCreate) {}
 
   public sendCtrl = async ({ body }: Request, res: Response) => {
-    const { message, phone, filePaths } = body;
+    const { message, phone, filePaths } = body; // Ahora recibimos filePaths como un array
 
     if (!message || !phone) {
       return res.status(400).send({ error: "Faltan parámetros: message o phone" });

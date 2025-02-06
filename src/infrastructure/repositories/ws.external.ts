@@ -70,7 +70,7 @@ class WsTransporter extends Client {
     });
   }
 
-  // Función para enviar un mensaje (con o sin imagen) por WhatsApp
+  // Función para enviar un mensaje (con o sin archivos adjuntos) por WhatsApp
   async sendMsg({
     message,
     phone,
@@ -86,21 +86,34 @@ class WsTransporter extends Client {
       const phoneNumber = `${phone}@c.us`;
       let lastResponse;
   
-      // Primero, enviamos el mensaje de texto si existe
+      // Enviar mensaje de texto si existe
       if (message) {
         lastResponse = await this.sendMessage(phoneNumber, message);
       }
   
-      // Procesar y enviar cada archivo individualmente
+      // Procesar cada archivo
       for (const filePath of filePaths) {
         try {
-          // Leer el archivo y convertirlo a base64
+          // Verificación de que la ruta es una cadena
+          if (typeof filePath !== 'string') {
+            console.error(`Se esperaba una ruta de archivo válida, pero se recibió: ${filePath}`);
+            continue; // Continuamos con el siguiente archivo
+          }
+  
+          // Verificar si el archivo existe
+          if (!fs.existsSync(filePath)) {
+            console.error(`El archivo no existe: ${filePath}`);
+            continue; // Continuamos con el siguiente archivo
+          }
+  
+          // Leer el archivo
           const fileBuffer = fs.readFileSync(filePath);
           const mimeType = this.getMimeType(filePath);
           const media = new MessageMedia(mimeType, fileBuffer.toString('base64'), path.basename(filePath));
   
-          // Enviar el archivo como un mensaje separado
-          lastResponse = await this.sendMessage(phoneNumber, media);
+          // Enviar archivo como mensaje
+          lastResponse = await this.sendMessage(phoneNumber, '', { media });
+  
         } catch (error) {
           console.error(`Error al procesar el archivo ${filePath}:`, error);
         }
@@ -113,6 +126,7 @@ class WsTransporter extends Client {
     }
   }
   
+
   // Método para determinar el tipo MIME según la extensión del archivo
   private getMimeType(filePath: string): string {
     const ext = path.extname(filePath).toLowerCase();
@@ -133,19 +147,12 @@ class WsTransporter extends Client {
     };
     return mimeTypes[ext] || 'application/octet-stream';
   }
-  
 
-
-  // Método para descargar la imagen desde una URL y convertirla a un objeto MessageMedia
-  // private async downloadImage(imageUrl: string): Promise<MessageMedia | null> {
-  //   try {
-  //     const response = await axios.get(imageUrl, { responseType: 'arraybuffer' });
-  //     const buffer = Buffer.from(response.data, 'binary');
-  //     return new MessageMedia('image/jpeg', buffer.toString('base64'));
-  //   } catch (error) {
-  //     console.error('Error al descargar la imagen:', error);
-  //     return null;
-  //   }
+  // Método de inicialización de eventos y configuraciones
+  // protected async initialize() {
+  //   // Esta función ahora es protected para cumplir con la firma esperada por la clase base Client
+  //   // Aquí se añaden los manejadores de eventos (ready, message, qr)
   // }
 }
+
 export default WsTransporter;

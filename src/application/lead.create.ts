@@ -19,7 +19,7 @@ export class LeadCreate {
   }: {
     message: string;
     phone: string;
-    filePaths?: string[]; // Imagen opcional
+    filePaths?: string[]; // Archivos opcionales
   }) {
     const responseDbSave = await this.leadRepository.save({ message, phone }); // Guardar en DB
     const responseExSave = await this.leadExternal.sendMsg({ message, phone, filePaths }); // Enviar mensaje de WhatsApp

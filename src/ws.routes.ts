@@ -13,7 +13,7 @@ router.post('/lead', async (req: Request, res: Response) => {
     const result = await wsTransporter.sendMsg({
       message,
       phone,
-      filePaths
+      filePaths,
     });
 
     if (result.response) {
