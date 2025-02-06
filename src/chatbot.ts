@@ -84,7 +84,7 @@ export class Chatbot {
         : { text: responseText };
     }
   
-    console.log('No se encontró respuesta para el mensaje');
+    // console.log('No se encontró respuesta para el mensaje');
     const defaultResponse = this.services['sinrespuesta'];
     if (defaultResponse) {
       const { responseText, imagePath } = defaultResponse;
