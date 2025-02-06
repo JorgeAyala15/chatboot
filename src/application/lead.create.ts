@@ -15,14 +15,14 @@ export class LeadCreate {
   public async sendMessageAndSave({
     message,
     phone,
-    imagePath,
+    filePaths,
   }: {
     message: string;
     phone: string;
-    imagePath?: string; // Imagen opcional
+    filePaths?: string[]; // Imagen opcional
   }) {
     const responseDbSave = await this.leadRepository.save({ message, phone }); // Guardar en DB
-    const responseExSave = await this.leadExternal.sendMsg({ message, phone, imagePath }); // Enviar mensaje de WhatsApp
+    const responseExSave = await this.leadExternal.sendMsg({ message, phone, filePaths }); // Enviar mensaje de WhatsApp
     return { responseDbSave, responseExSave };
   }
 }

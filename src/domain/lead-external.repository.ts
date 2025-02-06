@@ -3,11 +3,11 @@ export default interface LeadExternal {
     sendMsg({
       message,
       phone,
-      imagePath,
+      filePaths,
     }: {
       message: string;
       phone: string;
-      imagePath?: string; // Añadimos imagePath como parámetro opcional
+      filePaths?: string[]; 
     }): Promise<any>;
   }
   

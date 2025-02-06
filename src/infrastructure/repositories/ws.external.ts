@@ -74,62 +74,78 @@ class WsTransporter extends Client {
   async sendMsg({
     message,
     phone,
-    imagePath,
+    filePaths = [],
   }: {
     message: string;
     phone: string;
-    imagePath?: string;
+    filePaths?: string[];
   }): Promise<any> {
     try {
       if (!this.status) return { error: 'WAIT_LOGIN' };
-      if(imagePath?.includes('pdf')){
+  
+      const phoneNumber = `${phone}@c.us`;
+      let lastResponse;
+  
+      // Primero, enviamos el mensaje de texto si existe
+      if (message) {
+        lastResponse = await this.sendMessage(phoneNumber, message);
+      }
+  
+      // Procesar y enviar cada archivo individualmente
+      for (const filePath of filePaths) {
         try {
-          // Leer el archivo PDF desde la ruta local
-          const filePath = imagePath;
-          // console.log('filePath'+filePath)
-          const fileBuffer = fs.readFileSync(imagePath);
-          
-          // Crear el objeto MessageMedia para el archivo PDF
-          const media = new MessageMedia('application/pdf', fileBuffer.toString('base64'), path.basename(filePath));
-          
-          // Enviar el mensaje con el archivo PDF
-          const response = await this.sendMessage(`${phone}@c.us`, message, { media });
-          return { response };
-        } catch (error: any) {
-          console.error('Error al enviar el archivo PDF:', error);
-          return { error: error.message };
+          // Leer el archivo y convertirlo a base64
+          const fileBuffer = fs.readFileSync(filePath);
+          const mimeType = this.getMimeType(filePath);
+          const media = new MessageMedia(mimeType, fileBuffer.toString('base64'), path.basename(filePath));
+  
+          // Enviar el archivo como un mensaje separado
+          lastResponse = await this.sendMessage(phoneNumber, media);
+        } catch (error) {
+          console.error(`Error al procesar el archivo ${filePath}:`, error);
         }
       }
-      if (imagePath) {
   
-          // Si es una imagen, lo descargamos directamente
-          const media = await this.downloadImage(imagePath);
-          if (!media) {
-            return { error: 'No se pudo descargar la imagen desde la URL.' };
-          }
-          const response = await this.sendMessage(`${phone}@c.us`, message, { media });
-          return { response };
-      }
-
-      // Si no se pasa imagen, solo enviamos el mensaje de texto
-      const response = await this.sendMessage(`${phone}@c.us`, message);
-      return { response };
+      return { response: lastResponse };
     } catch (error: any) {
       console.error('Error al enviar el mensaje:', error);
       return { error: error.message };
     }
   }
+  
+  // Método para determinar el tipo MIME según la extensión del archivo
+  private getMimeType(filePath: string): string {
+    const ext = path.extname(filePath).toLowerCase();
+    const mimeTypes: { [key: string]: string } = {
+      '.jpg': 'image/jpeg',
+      '.jpeg': 'image/jpeg',
+      '.png': 'image/png',
+      '.gif': 'image/gif',
+      '.pdf': 'application/pdf',
+      '.doc': 'application/msword',
+      '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      '.xls': 'application/vnd.ms-excel',
+      '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      '.ppt': 'application/vnd.ms-powerpoint',
+      '.pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+      '.txt': 'text/plain',
+      '.zip': 'application/zip',
+    };
+    return mimeTypes[ext] || 'application/octet-stream';
+  }
+  
+
 
   // Método para descargar la imagen desde una URL y convertirla a un objeto MessageMedia
-  private async downloadImage(imageUrl: string): Promise<MessageMedia | null> {
-    try {
-      const response = await axios.get(imageUrl, { responseType: 'arraybuffer' });
-      const buffer = Buffer.from(response.data, 'binary');
-      return new MessageMedia('image/jpeg', buffer.toString('base64'));
-    } catch (error) {
-      console.error('Error al descargar la imagen:', error);
-      return null;
-    }
-  }
+  // private async downloadImage(imageUrl: string): Promise<MessageMedia | null> {
+  //   try {
+  //     const response = await axios.get(imageUrl, { responseType: 'arraybuffer' });
+  //     const buffer = Buffer.from(response.data, 'binary');
+  //     return new MessageMedia('image/jpeg', buffer.toString('base64'));
+  //   } catch (error) {
+  //     console.error('Error al descargar la imagen:', error);
+  //     return null;
+  //   }
+  // }
 }
 export default WsTransporter;

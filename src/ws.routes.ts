@@ -6,14 +6,14 @@ const router = express.Router();
 const wsTransporter = new WsTransporter();
 
 router.post('/lead', async (req: Request, res: Response) => {
-  const { message, phone, imagePath } = req.body;
+  const { message, phone, filePaths } = req.body;
 
   try {
     // Llamamos al método sendMsg con los parámetros correspondientes
     const result = await wsTransporter.sendMsg({
       message,
       phone,
-      imagePath
+      filePaths
     });
 
     if (result.response) {

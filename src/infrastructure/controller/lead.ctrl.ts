@@ -6,14 +6,14 @@ class LeadCtrl {
   constructor(private readonly leadCreator: LeadCreate) {}
 
   public sendCtrl = async ({ body }: Request, res: Response) => {
-    const { message, phone, imagePath } = body;
+    const { message, phone, filePaths } = body;
 
     if (!message || !phone) {
       return res.status(400).send({ error: "Faltan parámetros: message o phone" });
     }
 
     try {
-      const response = await this.leadCreator.sendMessageAndSave({ message, phone, imagePath });
+      const response = await this.leadCreator.sendMessageAndSave({ message, phone, filePaths });
       res.status(200).send(response);
     } catch (error: any) {
       console.error("Error al enviar el mensaje:", error);
