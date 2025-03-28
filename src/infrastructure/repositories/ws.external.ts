@@ -85,7 +85,7 @@ class WsTransporter extends Client {
   
       const phoneNumber = `${phone}@c.us`;
       let lastResponse;
-  
+      if(phoneNumber !=='' && phoneNumber !==undefined && phoneNumber !=='N/A'){
       // Enviar mensaje de texto si existe
       if (message) {
         lastResponse = await this.sendMessage(phoneNumber, message);
@@ -118,7 +118,7 @@ class WsTransporter extends Client {
           console.error(`Error al procesar el archivo ${filePath}:`, error);
         }
       }
-  
+    }
       return { response: lastResponse };
     } catch (error: any) {
       console.error('Error al enviar el mensaje:', error);
